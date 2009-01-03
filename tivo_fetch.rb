@@ -10,8 +10,19 @@ def fetch(tivo, program_id)
     url = show.content_url
     mak = tivo.mak
     filename = show.to_s + '.tivo'
+    cookie_file = Tempfile.new('cookies').path
     puts filename
-    system('curl', '--cookie-jar', 'cookies', '--digest', '--user', "tivo:#{tivo.mak}", '-o', filename, url);
+    system(%Q{curl --cookie-jar #{cookie_file} --digest --user "tivo:#{mak}" "#{url}" -o "#{filename}"})
+end
+
+def fetch_and_decode(tivo, program_id) 
+    show = tivo.show(program_id)
+    url = show.content_url
+    mak = tivo.mak
+    filename = show.to_s + '.mpg'
+    cookie_file = Tempfile.new('cookies').path
+    puts filename
+    system(%Q{curl --cookie-jar #{cookie_file} --digest --user "tivo:#{mak}" "#{url}" | tivodecode --mak #{mak} -o "#{filename}" -})
 end
 
 def nice_file_size(size)
@@ -55,6 +66,9 @@ OptionParser.new do |opts|
     opts.on("--detail", "Details") { |bool|
         options[:detail] = bool
     }
+    opts.on("--decode", "Decode") { |bool|
+        options[:decode] = bool
+    }
 end.parse!
 
 tivo = Votigoto::Base.new(host, mak)
@@ -63,6 +77,8 @@ if ! ARGV.empty? then
     ARGV.each { |id|
         if options[:detail] then
             print_details(tivo.show(id))
+        elsif options[:decode] then
+            fetch_and_decode(tivo, id)
         else
             fetch(tivo, id)
         end
