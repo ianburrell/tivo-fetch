@@ -33,7 +33,7 @@ def nice_file_size(size)
 end
 
 def nice_duration(msec)
-    Duration.new(:seconds => (msec / 60000.0).round * 60).strftime("%h:%M")
+    Duration.new(:seconds => (msec / 1000)).strftime("%h:%M:%S")
 end
 
 def print_details(show)
