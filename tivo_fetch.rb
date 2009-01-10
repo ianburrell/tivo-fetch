@@ -4,6 +4,7 @@ require 'optparse'
 require 'rubygems'
 require 'votigoto'
 require 'duration'
+require 'tempfile'
 
 def fetch(tivo, program_id) 
     show = tivo.show(program_id)
