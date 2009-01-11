@@ -24,24 +24,28 @@ def make_filename(show_name, extension, options)
     return filename
 end
 
-def fetch(tivo, program_id, options) 
+def setup_file(tivo, program_id, options, extension)
     show = tivo.show(program_id)
+    return unless show
     url = show.content_url
     mak = tivo.mak
-    filename = make_filename(show.to_s, 'tivo', options)
+    filename = make_filename(show.to_s, extension, options)
     cookie_file = Tempfile.new('cookies').path
-    return unless filename
+    return show, url, mak, filename, cookie_file
+end
+
+def fetch(tivo, program_id, options) 
+    show, url, mak, filename, cookie_file = setup_file(tivo, program_id, options, 'tivo')
+    return unless show && filename
     system(%Q{curl --cookie-jar #{cookie_file} --digest --user "tivo:#{mak}" "#{url}" -o "#{filename}"})
+    sleep(2)
 end
 
 def fetch_and_decode(tivo, program_id, options) 
-    show = tivo.show(program_id)
-    url = show.content_url
-    mak = tivo.mak
-    filename = make_filename(show.to_s, 'mpg', options)
-    cookie_file = Tempfile.new('cookies').path
-    return unless filename
+    show, url, mak, filename, cookie_file = setup_file(tivo, program_id, options, 'mpg')
+    return unless show && filename
     system(%Q{curl --cookie-jar #{cookie_file} --digest --user "tivo:#{mak}" "#{url}" | tivodecode --mak #{mak} -o "#{filename}" -})
+    sleep(2)
 end
 
 def nice_file_size(size)
@@ -96,24 +100,22 @@ end.parse!
 tivo = Votigoto::Base.new(host, mak)
 
 if ! ARGV.empty? then
-    ARGV.each { |id|
+    ARGV.each do |id|
         if options[:detail] then
             print_details(tivo.show(id))
         elsif options[:decode] then
             fetch_and_decode(tivo, id, options)
-            sleep(5)
         else
             fetch(tivo, id, options)
-            sleep(5)
         end
-    }
+    end
 else
-    tivo.shows.each { |show|
+    tivo.shows.each do |show|
         if options[:detail] then
             print_details(show)
         else
             puts "[#{show.program_id}] #{show}"
         end
-    }
+    end
 end
 
