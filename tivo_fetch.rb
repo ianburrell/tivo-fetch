@@ -65,11 +65,12 @@ def print_details(show)
     puts "source_station: #{show.source_station}"
     puts "program_id: #{show.program_id}"
     puts "series_id: #{show.series_id}"
-    puts "source_size: #{nice_file_size(show.source_size)})"
+    puts "source_size: #{nice_file_size(show.source_size)}"
     puts "duration: #{nice_duration(show.duration)}"
     puts "source_channel: #{show.source_channel}"
     puts "capture_date: #{show.capture_date.strftime("%Y-%m-%d %H:%M:%S")}"
     puts "in_progress: #{show.in_progress}"
+    puts "episode_number: #{show.episode_number}"
     puts
 end
 
@@ -92,6 +93,9 @@ OptionParser.new do |opts|
     opts.on("--decode", "Decode") { |bool|
         options[:decode] = bool
     }
+    opts.on("--fetch", "Fetch") { |bool|
+        options[:fetch] = bool
+    }
     opts.on("--skip", "Skip existing files") { |bool|
         options[:skip] = bool
     }
@@ -113,6 +117,10 @@ else
     tivo.shows.each do |show|
         if options[:detail] then
             print_details(show)
+        elsif options[:decode] then
+            fetch_and_decode(tivo, show.program_id, options)
+        elsif options[:fetch] then
+            fetch(tivo, show.program_id, options)
         else
             puts "[#{show.program_id}] #{show}"
         end
