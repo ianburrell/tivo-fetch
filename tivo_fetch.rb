@@ -167,7 +167,13 @@ else
     if options[:detail] then
       print_details(show)
     elsif options[:decode] || options[:fetch] || options[:encode] then
-      next if show.in_progress
+      if show.in_progress then
+        puts "in progress #{show.to_s}"
+        next
+      elsif show.copy_protected then
+        puts "copy protected #{show.to_s}"
+        next
+      end
       TivoFetcher.new(tivo, show, options).smart_fetch()
     else
       puts "[#{show.program_id}] #{show}"
