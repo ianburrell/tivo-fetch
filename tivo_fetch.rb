@@ -53,42 +53,39 @@ class TivoFetcher
       fetch
     end
   end
-  
-  def fetch 
-    filename = make_filename("tivo")
+
+  def run_cmd(extension, &get_cmd)
+    filename = make_filename(extension)
     return unless filename
-    cmd = fetch_cmd()
     temp_filename = filename + ".tmp"
-    cmd += %Q{ -o "#{temp_filename}"}
-    puts(cmd)
+    cmd = get_cmd.call(temp_filename)
+    puts cmd if @options[:verbose]
     system(cmd) or raise "#{cmd} failed: $?"
     File.rename(temp_filename, filename)
     sleep(2)
+  end
+  
+  def fetch
+    run_cmd("tivo") { |temp_filename|
+      fetch_cmd() \
+        + %Q{ -o "#{temp_filename}"}
+    }
   end
 
   def fetch_and_decode
-    filename = make_filename("mpg")
-    return unless filename
-    cmd = fetch_cmd()
-    temp_filename = filename + ".tmp"
-    cmd += %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" -}
-    puts cmd
-    system(cmd) or raise "#{cmd} failed: $?"
-    File.rename(temp_filename, filename)
-    sleep(2)
+    run_cmd("mpg") { |temp_filename|
+      fetch_cmd() \
+        + %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" -}
+    }
   end
 
   def fetch_and_encode
-    filename = make_filename("m4v")
-    return unless filename
-    cmd = fetch_cmd()
-    temp_filename = filename + ".tmp"
-    cmd += %Q{ | tivodecode --mak #{@mak} -}
-    cmd += %Q{ | mencoder -quiet -profile low -o "#{temp_filename}" -}
-    puts cmd
-    system(cmd) or raise "#{cmd} failed: $?"
-    File.rename(temp_filename, filename)
-    sleep(2)
+    run_cmd("mp4") { |temp_filename|
+      fetch_cmd() \
+        + %Q{ | tivodecode --mak #{@mak} -} \
+        + %Q{ | ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'error' } -i - -c:v libx264 -preset fast -c:a copy -f mp4 "#{temp_filename}"}
+      #%Q{ | mencoder -quiet -profile low -o "#{temp_filename}" -}
+    }
   end
 
 end
