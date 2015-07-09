@@ -41,7 +41,7 @@ class TivoFetcher
   def fetch_cmd
     url = @show.content_url
     cookie_file = Tempfile.new('cookies').path
-    return %Q{curl --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
+    return %Q{curl #{@options[:verbose] ? '-v' : '-q'} --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
   end
 
   def smart_fetch
@@ -146,6 +146,9 @@ OptionParser.new do |opts|
   }
   opts.on("--show", "Show directories") { |bool|
     options[:show_dir] = bool
+  }
+  opts.on("--verbose", "Verbose") { |bool|
+    options[:verbose] = bool
   }
 end.parse!
 
