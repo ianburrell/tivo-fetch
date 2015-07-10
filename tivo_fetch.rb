@@ -15,9 +15,17 @@ class TivoFetcher
   end
 
   def make_filename(extension)
-    if @options[:show_dir] && (@show.episode_number || @show.episode_title) then
+    if @options[:show_dir] && @show.episode_number then
       Dir.mkdir(@show.title) unless Dir.exists?(@show.title)
-      base_name = @show.title + '/' + (@show.episode_number ? sprintf("S%04d ", @show.episode_number) : '') + (@show.episode_title ? @show.episode_title : '')
+      season_num = @show.episode_number / 100;
+      season_episode = @show.episode_number % 100;
+      season_dir = @show.title + '/' \
+                   + 'Season ' + sprintf("%02d", season_num)
+      Dir.mkdir(season_dir) unless Dir.exists?(season_dir)
+      base_name = season_dir + '/' \
+                  + @show.title + ' - ' \
+                  + sprintf("s%02de%02d", season_num, season_episode) \
+                  + (@show.episode_title ? ' - ' + @show.episode_title : '')
     else
       base_name = @show.to_s
     end
