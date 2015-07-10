@@ -1,0 +1,11 @@
+#!/bin/bash
+for file in "$@"
+do
+    mp4_file=${file/.mpg/.m4v}
+    tmp_file=${mp4_file}.tmp
+    echo $file
+    ffmpeg -loglevel fatal -i "$file" -c:v libx264 -crf 23 -c:a copy -f mp4 "$tmp_file" || exit
+    mv "$tmp_file" "$mp4_file"
+    echo $mp4_file
+    #rm "$file"
+done
