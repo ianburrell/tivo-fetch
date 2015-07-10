@@ -3,10 +3,12 @@ for file in "$@"
 do
     mp4_file=${file/.mpg/.m4v}
     tmp_file=${mp4_file}.tmp
-    if [ -e "$mp4_file" ]; do
-        echo $file -> $mp4_file
+    if [ ! -e "$mp4_file" ]; then
+        echo "convert $file"
         ffmpeg -loglevel fatal -i "$file" -c:v libx264 -crf 23 -c:a copy -f mp4 "$tmp_file" || exit
         mv "$tmp_file" "$mp4_file"
+        echo "create $mp4_file"
     fi
+    #echo "remove $file"
     #rm "$file"
 done
