@@ -32,7 +32,7 @@ class TivoFetcher
     filename = base_name + '.' + extension
     if @options[:skip] then
       if File.exists?(filename) && File.size(filename) > 100 then
-        puts "skipping #{filename}"
+        puts "skipping #{@show.program_id} #{filename}"
         return nil
       end
     else 
@@ -42,14 +42,14 @@ class TivoFetcher
         filename = (base_name + '.' + counter.to_s + '.' + extension)
       end
     end
-    puts "fetch #{filename}"
+    puts "fetch #{@show.program_id} #{filename}"
     return filename
   end
 
   def fetch_cmd
     url = @show.content_url
     cookie_file = Tempfile.new('cookies').path
-    return %Q{curl #{@options[:verbose] ? '-v' : '-q'} --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
+    return %Q{curl #{@options[:verbose] ? '-v' : '-s'} --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
   end
 
   def smart_fetch
@@ -68,9 +68,9 @@ class TivoFetcher
     temp_filename = filename + ".tmp"
     cmd = get_cmd.call(temp_filename)
     puts cmd if @options[:verbose]
-    system(cmd) or raise "#{cmd} failed: $?"
+    system(cmd) or raise "#{cmd} failed: #{$?}"
     File.rename(temp_filename, filename)
-    sleep(2)
+    sleep(5)
   end
   
   def fetch
@@ -83,15 +83,15 @@ class TivoFetcher
   def fetch_and_decode
     run_cmd("mpg") { |temp_filename|
       fetch_cmd() \
-        + %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" -}
+        + %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" - #{@options[:verbose] ? '' : ' 2>/dev/null'}}
     }
   end
 
   def fetch_and_encode
-    run_cmd("mp4") { |temp_filename|
+    run_cmd("m4v") { |temp_filename|
       fetch_cmd() \
-        + %Q{ | tivodecode --mak #{@mak} -} \
-        + %Q{ | ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'error' } -i - -c:v libx264 -preset fast -c:a copy -f mp4 "#{temp_filename}"}
+        + %Q{ | tivodecode --mak #{@mak} - 2>/dev/null} \
+        + %Q{ | ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'fatal' } -i - -c:v libx264 -crf 23 -c:a copy -f mp4 "#{temp_filename}"}
       #%Q{ | mencoder -quiet -profile low -o "#{temp_filename}" -}
     }
   end
@@ -146,6 +146,9 @@ OptionParser.new do |opts|
   opts.on("--mp4", "Encode MP4") { |bool|
     options[:encode] = bool
   }
+  opts.on("--encode", "Encode MP4") { |bool|
+    options[:encode] = bool
+  }
   opts.on("--fetch", "Fetch") { |bool|
     options[:fetch] = bool
   }
@@ -176,15 +179,15 @@ else
       print_details(show)
     elsif options[:decode] || options[:fetch] || options[:encode] then
       if show.in_progress then
-        puts "in progress #{show.to_s}"
+        puts "in progress #{show.program_id} #{show.to_s}"
         next
       elsif show.copy_protected then
-        puts "copy protected #{show.to_s}"
+        puts "copy protected #{show.program_id} #{show.to_s}"
         next
       end
       TivoFetcher.new(tivo, show, options).smart_fetch()
     else
-      puts "[#{show.program_id}] #{show}"
+      puts "#{show.program_id} #{show}"
     end
   end
 end
