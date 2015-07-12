@@ -1,14 +1,18 @@
 #!/bin/bash
-for file in "$@"
+find -name "*.mpg" -print0 | while read -d $'\0' file
 do
     mp4_file=${file/.mpg/.m4v}
-    tmp_file=${mp4_file}.tmp
-    if [ ! -e "$mp4_file" ]; then
-        echo "convert $file"
-        ffmpeg -loglevel fatal -i "$file" -c:v libx264 -crf 23 -c:a copy -f mp4 "$tmp_file" || exit
-        mv "$tmp_file" "$mp4_file"
-        echo "create $mp4_file"
+    tmp_file=$(mktemp -u "${mp4_file}.tmp.XXXX")
+    if [ -s "$file" ]
+    then
+        if [ ! -e "$mp4_file" ]
+        then
+            echo "convert $file"
+            ffmpeg -nostdin -loglevel fatal -i "$file" -c:v libx264 -crf 23 -c:a copy -f mp4 "$tmp_file" || exit
+            mv "$tmp_file" "$mp4_file"
+            echo "create $mp4_file"
+        fi
+        echo "remove $file"
+        rm "$file"
     fi
-    #echo "remove $file"
-    #rm "$file"
 done
