@@ -8,87 +8,105 @@ require 'tempfile'
 
 class TivoFetcher
 
-  def initialize(tivo, show, options)
+  def initialize(tivo, options)
     @mak = tivo.mak
-    @show = show
     @options = options
   end
 
-  def make_filename(extension)
-    if @options[:show_dir] && @show.episode_number then
-      Dir.mkdir(@show.title) unless Dir.exists?(@show.title)
-      season_num = @show.episode_number / 100;
-      season_episode = @show.episode_number % 100;
-      season_dir = @show.title + '/' \
-                   + 'Season ' + sprintf("%02d", season_num)
-      Dir.mkdir(season_dir) unless Dir.exists?(season_dir)
-      base_name = season_dir + '/' \
-                  + @show.title + ' - ' \
-                  + sprintf("s%02de%02d", season_num, season_episode) \
-                  + (@show.episode_title ? ' - ' + @show.episode_title : '')
+  def make_filename(show, extension)
+    if @options[:show_dir]  && show.episode_number && show.episode_number > 100 then
+      base_name = plex_title(show)
     else
-      base_name = @show.to_s
+      base_name = show.to_s
     end
-    filename = base_name + '.' + extension
     if @options[:skip] then
-      if File.exists?(filename) && File.size(filename) > 100 then
-        puts "skipping #{@show.program_id} #{filename}"
+      skip_file = find_skip(base_name, extension, 'mpg', 'm4v')
+      if skip_file then
+        puts "skipping #{show.program_id} #{skip_file}"
         return nil
       end
+      filename = base_name + '.' + extension
     else 
-      counter = 0
-      while File.exists?(filename) && File.size(filename) > 100 do
-        counter += 1
-        filename = (base_name + '.' + counter.to_s + '.' + extension)
-      end
+      filename = counter_filename(base_name, extension)
     end
-    puts "fetch #{@show.program_id} #{filename}"
+    puts "fetch #{show.program_id} #{filename}"
     return filename
   end
 
-  def fetch_cmd
-    url = @show.content_url
+  def plex_title(show)
+      Dir.mkdir(show.title) unless Dir.exists?(show.title)
+      season_num = show.episode_number / 100;
+      season_episode = show.episode_number % 100;
+      season_dir = show.title + '/' \
+                   + 'Season ' + sprintf("%02d", season_num)
+      Dir.mkdir(season_dir) unless Dir.exists?(season_dir)
+      base_name = season_dir + '/' \
+                  + show.title + ' - ' \
+                  + sprintf("s%02de%02d", season_num, season_episode) \
+                  + (show.episode_title ? ' - ' + show.episode_title : '')
+
+
+  end
+
+  def find_skip(base_name, *extensions)
+    extensions.uniq.flat_map { |ext|
+      [ base_name + '.' + ext, '.' + base_name + '.' + ext ]
+    }.find { |file| File.exists?(file) }
+  end
+  
+  def counter_filename(base_name, extension)
+    filename = base_name + '.' + extension
+    counter = 0
+    while File.exists?(filename) do
+      counter += 1
+      filename = (base_name + '.' + counter.to_s + '.' + extension)
+    end
+    return filename
+  end
+
+  def fetch_cmd(show)
+    url = show.content_url
     cookie_file = Tempfile.new('cookies').path
     return %Q{curl #{@options[:verbose] ? '-v' : '-s'} --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
   end
 
-  def smart_fetch
+  def smart_fetch(show)
     if @options[:encode] then
-      fetch_and_encode
+      fetch_and_encode(show)
     elsif @options[:decode] then
-      fetch_and_decode
+      fetch_and_decode(show)
     else
-      fetch
+      fetch(show)
     end
   end
 
-  def run_cmd(extension, &get_cmd)
-    filename = make_filename(extension)
+  def run_cmd(show, extension, &get_cmd)
+    filename = make_filename(show, extension)
     return unless filename
     temp_filename = filename + ".tmp"
-    cmd = get_cmd.call(temp_filename)
+    cmd = get_cmd.call(show, temp_filename)
     puts cmd if @options[:verbose]
     system(cmd) or raise "#{cmd} failed: #{$?}"
     File.rename(temp_filename, filename)
     sleep(5)
   end
   
-  def fetch
-    run_cmd("tivo") { |temp_filename|
-      fetch_cmd() \
+  def fetch(show)
+    run_cmd(show, "tivo") { |show, temp_filename|
+      fetch_cmd(show) \
         + %Q{ -o "#{temp_filename}"}
     }
   end
 
-  def fetch_and_decode
-    run_cmd("mpg") { |temp_filename|
-      fetch_cmd() \
+  def fetch_and_decode(show)
+    run_cmd(show, "mpg") { |show, temp_filename|
+      fetch_cmd(show) \
         + %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" - #{@options[:verbose] ? '' : ' 2>/dev/null'}}
     }
   end
 
-  def fetch_and_encode
-    run_cmd("m4v") { |temp_filename|
+  def fetch_and_encode(show)
+    run_cmd(show, "m4v") { |show, temp_filename|
       fetch_cmd() \
         + %Q{ | tivodecode --mak #{@mak} - 2>/dev/null} \
         + %Q{ | ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'fatal' } -i - -c:v libx264 -crf 23 -c:a copy -f mp4 "#{temp_filename}"}
@@ -170,7 +188,7 @@ if ! ARGV.empty? then
     if options[:detail] then
       print_details(tivo.show(id))
     else
-      TivoFetcher.new(tivo, tivo.show(id), options).smart_fetch()
+      TivoFetcher.new(tivo, options).smart_fetch(tivo.show(id))
     end
   end
 else
@@ -186,10 +204,9 @@ else
         puts "copy protected #{show.program_id} #{show.to_s}"
         next
       end
-      TivoFetcher.new(tivo, show, options).smart_fetch()
+      TivoFetcher.new(tivo, options).smart_fetch(show)
     else
       puts "#{show.program_id} #{show}"
     end
   end
 end
-
