@@ -22,11 +22,11 @@ class TivoFetcher
     if @options[:skip] then
       skip_file = find_skip(base_name, extension, 'mpg', 'm4v')
       if skip_file then
-        puts "skipping #{show.program_id} #{skip_file}"
+        puts "skipping #{show.program_id} #{skip_file}" unless @options[:quiet]
         return nil
       end
       filename = base_name + '.' + extension
-    else 
+   else 
       filename = counter_filename(base_name, extension)
     end
     puts "fetch #{show.program_id} #{filename}"
@@ -179,6 +179,9 @@ OptionParser.new do |opts|
   opts.on("--verbose", "Verbose") { |bool|
     options[:verbose] = bool
   }
+  opts.on("--quiet", "Quiet") { |bool|
+    options[:quiet] = bool
+  }
 end.parse!
 
 tivo = Votigoto::Base.new(host, mak)
@@ -198,10 +201,10 @@ else
       print_details(show)
     elsif options[:decode] || options[:fetch] || options[:encode] then
       if show.in_progress then
-        puts "in progress #{show.program_id} #{show.to_s}"
+        puts "in progress #{show.program_id} #{show.to_s}" unless options[:quiet]
         next
       elsif show.copy_protected then
-        puts "copy protected #{show.program_id} #{show.to_s}"
+        puts "copy protected #{show.program_id} #{show.to_s}" unless options[:quiet]
         next
       end
       TivoFetcher.new(tivo, options).smart_fetch(show)
