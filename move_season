@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use File::Path;
+
+my ($file, $season, $episode) = @ARGV;
+die "season required" unless defined $season;
+die "episode required" unless defined $episode;
+die "file required" unless defined $file;
+
+my ($show_title, $episode_title) = split(/ - /, $file);
+die "show_title not found for $file" unless $show_title;
+die "episode_title not found for $file" unless $episode_title;
+
+my $show_dir = $show_title;
+my $season_dir = sprintf("Season %02d", $season);
+mkpath("$show_dir/$season_cd /home/ian/Videos/Tivo && flock -n .tivo_convert.lock -c tivo_convert | ts "%F %T" >> tivo_convert.logdir");
+
+my $plex_file = sprintf("%s - s%02de%02d - %s", $show_title, $season, $episode, $episode_title);
+my $plex_path = "$show_dir/$season_dir/$plex_file";
+
+print "$plex_path\n";
+rename($file, $plex_path)
+              or die "Rename $file to $plex_path failed: $!";
+system('touch', ".$file");
