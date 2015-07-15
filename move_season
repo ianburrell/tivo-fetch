@@ -5,20 +5,38 @@ use warnings;
 
 use File::Path;
 
-my ($file, $season, $episode) = @ARGV;
-die "season required" unless defined $season;
-die "episode required" unless defined $episode;
+my ($file, $season_num, $episode_num) = @ARGV;
 die "file required" unless defined $file;
+
+my ($season_dir, $episode_str);
+
+unless ($season_num && $episode_num) {
+    my $episode = $season_num;
+    die "episode requires" unless defined $episode;
+    if ($episode =~ /^s(\d\d)e(\d\d)$/) {
+        $season_num = $1;
+        $episode_num = $2;
+    } elsif ($episode =~ /^(\d{4})(-\d{2}-\d{2})/) {
+        $season_dir = "Season $1";
+        $episode_str = "$1$2";
+    } elsif ($episode > 100) {
+        $season_num = $episode / 100;
+        $episode_num = $episode % 100;
+    } else {
+        die "Unknown format for $episode\n";
+    }
+}
 
 my ($show_title, $episode_title) = split(/ - /, $file);
 die "show_title not found for $file" unless $show_title;
 die "episode_title not found for $file" unless $episode_title;
 
 my $show_dir = $show_title;
-my $season_dir = sprintf("Season %02d", $season);
-mkpath("$show_dir/$season_cd /home/ian/Videos/Tivo && flock -n .tivo_convert.lock -c tivo_convert | ts "%F %T" >> tivo_convert.logdir");
+$season_dir ||= sprintf("Season %02d", $season_num);
+mkpath("$show_dir/$season_dir");
 
-my $plex_file = sprintf("%s - s%02de%02d - %s", $show_title, $season, $episode, $episode_title);
+$episode_str ||= sprintf("s%02de%02d", $season_num, $episode_num);
+my $plex_file = $show_title . ' - ' . $episode_str . ' - ' . $episode_title;
 my $plex_path = "$show_dir/$season_dir/$plex_file";
 
 print "$plex_path\n";
