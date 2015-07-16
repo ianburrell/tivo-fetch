@@ -5,12 +5,16 @@ require 'rubygems'
 require 'votigoto'
 require 'duration'
 require 'tempfile'
+require 'yaml'
 
 class TivoFetcher
 
   def initialize(tivo, options)
     @mak = tivo.mak
     @options = options
+    if @options[:series_map] then
+      @series_map = YAML.load_file(@options[:series_map])
+    end
   end
 
   def make_filename(show, extension)
@@ -34,18 +38,18 @@ class TivoFetcher
   end
 
   def plex_title(show)
-      Dir.mkdir(show.title) unless Dir.exists?(show.title)
-      season_num = show.episode_number / 100;
-      season_episode = show.episode_number % 100;
-      season_dir = show.title + '/' \
-                   + 'Season ' + sprintf("%02d", season_num)
-      Dir.mkdir(season_dir) unless Dir.exists?(season_dir)
-      base_name = season_dir + '/' \
-                  + show.title + ' - ' \
-                  + sprintf("s%02de%02d", season_num, season_episode) \
-                  + (show.episode_title ? ' - ' + show.episode_title : '')
-
-
+    series = show.title
+    series_dir = (@series_map && @series_map[series]) || series
+    Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
+    season_num = show.episode_number / 100;
+    episode_num = show.episode_number % 100;
+    season_dir = 'Season ' + sprintf("%02d", season_num)
+    dir = series_dir + '/' + season_dir
+    Dir.mkdir(dir) unless Dir.exists?(dir)
+    file = series + ' - ' \
+           + sprintf("s%02de%02d", season_num, episode_num) \
+           + (show.episode_title ? ' - ' + show.episode_title : '')
+    base_name = dir + '/' + file
   end
 
   def find_skip(base_name, *extensions)
@@ -154,6 +158,9 @@ OptionParser.new do |opts|
   }
   opts.on("--mak MAK", "Media Access Key") { |val|
     mak = val
+  }
+  opts.on("--series-map FILE", "Series map YAML file") { |val|
+    options[:series_map] = val
   }
   opts.on("--detail", "Details") { |bool|
     options[:detail] = bool
