@@ -192,10 +192,11 @@ tivo = Votigoto::Base.new(host, mak)
 
 if ! ARGV.empty? then
   ARGV.each do |id|
+    show = tivo.show(id) or raise "show not found for #{id}"
     if options[:detail] then
-      print_details(tivo.show(id))
+      print_details(show)
     else
-      TivoFetcher.new(tivo, options).smart_fetch(tivo.show(id))
+      TivoFetcher.new(tivo, options).smart_fetch(show)
     end
   end
 else
