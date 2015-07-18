@@ -1,45 +1,42 @@
-#!/usr/bin/perl
+#!/usr/bin/env ruby
 
-use strict;
-use warnings;
+require 'fileutils'
 
-use File::Path;
+file = ARGV.shift or raise "file required"
 
-my ($file, $season_num, $episode_num) = @ARGV;
-die "file required" unless defined $file;
+if ARGV.length == 2 then
+  season_num, episode_num = *ARGV
+elsif ARGV.length == 1 then
+  episode = ARGV[0]
+  if match = episode.match(/^s(\d\d)e(\d\d)$/) then
+    season_num, episode_num = match.captures
+  elsif match = episode.match(/^(\d{4})(-\d{2}-\d{2})/) then
+    season_dir = "Season #{match[1]}"
+    episode_str = match[0]
+  elsif episode.to_i > 100 then
+    season_num = episode.to_i / 100;
+    episode_num = episode.to_i % 100;
+  else
+    raise "Unknown format for #{episode}"
+  end
+else
+  raise "Wrong number of arguments"
+end
 
-my ($season_dir, $episode_str);
+show_title, episode_title = file.split(' - ')
 
-unless ($season_num && $episode_num) {
-    my $episode = $season_num;
-    die "episode requires" unless defined $episode;
-    if ($episode =~ /^s(\d\d)e(\d\d)$/) {
-        $season_num = $1;
-        $episode_num = $2;
-    } elsif ($episode =~ /^(\d{4})(-\d{2}-\d{2})/) {
-        $season_dir = "Season $1";
-        $episode_str = "$1$2";
-    } elsif ($episode > 100) {
-        $season_num = $episode / 100;
-        $episode_num = $episode % 100;
-    } else {
-        die "Unknown format for $episode\n";
-    }
-}
+series_dir = show_title
+Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
 
-my ($show_title, $episode_title) = split(/ - /, $file);
-die "show_title not found for $file" unless $show_title;
-die "episode_title not found for $file" unless $episode_title;
+season_dir ||= 'Season ' + sprintf("%02d", season_num)
+dir = series_dir + '/' + season_dir
+Dir.mkdir(dir) unless Dir.exists?(dir)
 
-my $show_dir = $show_title;
-$season_dir ||= sprintf("Season %02d", $season_num);
-mkpath("$show_dir/$season_dir");
+episode_str ||= sprintf("s%02de%02d", season_num, episode_num)
+plex_file = "#{show_title} - #{episode_str} - #{episode_title}"
+plex_path = dir + '/' + plex_file
 
-$episode_str ||= sprintf("s%02de%02d", $season_num, $episode_num);
-my $plex_file = $show_title . ' - ' . $episode_str . ' - ' . $episode_title;
-my $plex_path = "$show_dir/$season_dir/$plex_file";
+puts plex_path
+File.rename(file, plex_path)
 
-print "$plex_path\n";
-rename($file, $plex_path)
-              or die "Rename $file to $plex_path failed: $!";
-system('touch', ".$file");
+FileUtils.touch(".#{file}")
