@@ -46,9 +46,9 @@ class TivoFetcher
     season_dir = 'Season ' + sprintf("%02d", season_num)
     dir = series_dir + '/' + season_dir
     Dir.mkdir(dir) unless Dir.exists?(dir)
-    file = series + ' - ' \
-           + sprintf("s%02de%02d", season_num, episode_num) \
-           + (show.episode_title ? ' - ' + show.episode_title : '')
+    episode_str = sprintf("s%02de%02d", season_num, episode_num)
+    file = series + ' - ' + episode_str \
+        + (show.episode_title ? ' - ' + show.episode_title : '')
     base_name = dir + '/' + file
   end
 
