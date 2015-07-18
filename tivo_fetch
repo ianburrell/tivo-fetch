@@ -18,7 +18,7 @@ class TivoFetcher
   end
 
   def make_filename(show, extension)
-    if @options[:show_dir]  && show.episode_number && show.episode_number > 100 then
+    if @options[:plex_dir]  && show.episode_number && show.episode_number > 100 then
       base_name = plex_title(show)
     else
       base_name = show.to_s
@@ -168,10 +168,7 @@ OptionParser.new do |opts|
   opts.on("--decode", "Decode") { |bool|
     options[:decode] = bool
   }
-  opts.on("--mp4", "Encode MP4") { |bool|
-    options[:encode] = bool
-  }
-  opts.on("--encode", "Encode MP4") { |bool|
+  opts.on("--mp4", "--encode", "Encode MP4") { |bool|
     options[:encode] = bool
   }
   opts.on("--fetch", "Fetch") { |bool|
@@ -180,8 +177,8 @@ OptionParser.new do |opts|
   opts.on("--skip", "Skip existing files") { |bool|
     options[:skip] = bool
   }
-  opts.on("--show", "Show directories") { |bool|
-    options[:show_dir] = bool
+  opts.on("--show", "--plex", "Plex directories") { |bool|
+    options[:plex_dir] = bool
   }
   opts.on("--verbose", "Verbose") { |bool|
     options[:verbose] = bool
