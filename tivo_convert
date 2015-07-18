@@ -1,18 +1,23 @@
-#!/bin/bash
-find -name "*.mpg" -print0 | while read -d $'\0' file
-do
-    mp4_file=${file/.mpg/.m4v}
-    tmp_file=$(mktemp -u "${mp4_file}.tmp.XXXX")
-    if [ -s "$file" ]
-    then
-        if [ ! -e "$mp4_file" ]
-        then
-            echo "convert $file"
-            ffmpeg -nostdin -loglevel fatal -i "$file" -c:v libx264 -crf 23 -c:a copy -f mp4 "$tmp_file" || exit
-            mv "$tmp_file" "$mp4_file"
-            echo "create $mp4_file"
-        fi
-        echo "remove $file"
-        rm "$file"
-    fi
-done
+#!/usr/bin/env ruby
+
+require 'find'
+require 'tempfile'
+
+Find.find('.') do |path|
+  if path =~ /.*\.mpg$/ then
+    if File.size?(path) then
+      mp4_file = path.sub(/\.mpg$/, '.m4v')
+      if ! File.exists?(mp4_file) then
+        puts "convert #{path}"
+        Dir::Tmpname.create(File.basename(mp4_file) + '.tmp.', File.dirname(path)) do |tmp_file|
+          cmd = %Q{ffmpeg -nostdin -loglevel fatal -i "#{path}" -c:v libx264 -crf 23 -c:a copy -f mp4 "#{tmp_file}"}
+          system(cmd) or raise "#{cmd} failed: #{$?}"
+          File.rename(tmp_file, mp4_file)
+          puts "create #{mp4_file}"
+        end
+      end
+      puts "remove #{path}"
+      File.unlink(path)
+    end
+  end
+end
