@@ -1,6 +1,24 @@
 #!/usr/bin/env ruby
 
+require 'optparse'
 require 'fileutils'
+require 'yaml'
+
+options = {}
+series_map, subdir, touch = nil
+OptionParser.new do |opts|
+  opts.banner = "Usage: tivo_fetch.rb [options]"
+  
+  opts.on("--series-map FILE", "Series map YAML file") { |val|
+    series_map = YAML.load_file(val)
+  }
+  opts.on("--subdir") { |bool|
+    subdir = bool
+  }
+  opts.on("--touch") { |bool|
+    touch = bool
+  }
+end.parse!
 
 file = ARGV.shift or raise "file required"
 
@@ -23,20 +41,34 @@ else
   raise "Wrong number of arguments"
 end
 
-show_title, episode_title = file.split(' - ')
-
-series_dir = show_title
-Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
-
-season_dir ||= 'Season ' + sprintf("%02d", season_num)
-dir = series_dir + '/' + season_dir
-Dir.mkdir(dir) unless Dir.exists?(dir)
+parts = File.basename(file).split(' - ')
+if parts.length == 2 then
+  show_title, episode_title = parts
+elsif parts.length == 3 then
+  show_title, old_episode, episode_title = parts
+else
+  raise "Couldn't split #{file}"
+end
 
 episode_str ||= sprintf("s%02de%02d", season_num, episode_num)
 plex_file = "#{show_title} - #{episode_str} - #{episode_title}"
-plex_path = dir + '/' + plex_file
+
+if ! subdir then
+  series_dir = series_map && series_map[show_title] || show_title
+  Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
+
+  season_dir ||= 'Season ' + sprintf("%02d", season_num)
+  dir = series_dir + '/' + season_dir
+  Dir.mkdir(dir) unless Dir.exists?(dir)
+
+  plex_path = dir + '/' + plex_file
+else
+  plex_path = plex_file
+end
 
 puts plex_path
 File.rename(file, plex_path)
 
-FileUtils.touch(".#{file}")
+if touch then
+  FileUtils.touch(File.dirname(file) + "/." + File.basename(file))
+end  
