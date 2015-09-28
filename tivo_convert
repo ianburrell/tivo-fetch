@@ -4,8 +4,8 @@ require 'find'
 require 'tempfile'
 
 Find.find('.') do |path|
-  if path =~ /.*\.mpg$/ then
-    if File.size?(path) then
+  if path =~ /.*\.mpg$/ && File.size?(path) && File.size?(path) > 4 then
+    begin
       mp4_file = path.sub(/\.mpg$/, '.m4v')
       if ! File.exists?(mp4_file) then
         puts "convert #{path}"
@@ -18,6 +18,8 @@ Find.find('.') do |path|
       end
       puts "remove #{path}"
       File.unlink(path)
+    rescue => e
+      print "#{path} failed: #{e}"
     end
   end
 end
