@@ -1,6 +1,6 @@
 ## Description
 
-These are script for downloading and converting videos from a [Tivo DVR](http://www.tivo.com/) using the TivoToGo API.
+These are scripts for downloading and converting videos from a [Tivo DVR](http://www.tivo.com/) using the TivoToGo API.
 They are meant to be run regularly from cron to download and convert new videos.
 
 # tivo_fetch
