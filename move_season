@@ -5,15 +5,15 @@ require 'fileutils'
 require 'yaml'
 
 options = {}
-series_map, subdir, touch = nil
+series_map, no_subdir, touch = nil
 OptionParser.new do |opts|
   opts.banner = "Usage: tivo_fetch.rb [options]"
   
   opts.on("--series-map FILE", "Series map YAML file") { |val|
     series_map = YAML.load_file(val)
   }
-  opts.on("--subdir") { |bool|
-    subdir = bool
+  opts.on("--no-subdir") { |bool|
+    no_subdir = bool
   }
   opts.on("--touch") { |bool|
     touch = bool
@@ -53,7 +53,7 @@ end
 episode_str ||= sprintf("s%02de%02d", season_num, episode_num)
 plex_file = "#{show_title} - #{episode_str} - #{episode_title}"
 
-if ! subdir then
+if ! no_subdir then
   series_dir = series_map && series_map[show_title] || show_title
   Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
 
