@@ -1,0 +1,36 @@
+#!/usr/bin/ruby
+
+def split_file(start_time, duration, input, output)
+  if File.exists?(output) then
+    puts "skipping #{output}"
+    return
+  end
+  cmd = %Q{ffmpeg -loglevel fatal -ss #{start_time} -t #{duration} -i "#{input}" -vcodec copy -acodec copy "#{output}"}
+  puts cmd
+  system(cmd) or raise "#{cmd} failed: #{$?}"
+end
+
+duration = ARGV.shift
+
+ARGV.each do |file|
+  extension = File.extname(file)
+
+  parts = File.basename(file, extension).split(' - ')
+  if parts.length == 3 then
+    show_title, episode_num, episode_title = parts
+  elsif parts.length == 2 then
+    show_title, episode_title = parts
+  else
+    puts "could not split #{file}"
+    next
+  end
+
+  episodes = episode_title.split('; ')
+  if episodes.length != 2 then
+    puts "not multiple episodes #{episode_title}"
+    next
+  end
+
+  split_file("00:00", duration, file, "#{show_title} - #{episodes[0]}#{extension}")
+  split_file(duration, duration, file, "#{show_title} - #{episodes[1]}#{extension}")
+end
