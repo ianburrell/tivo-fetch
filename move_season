@@ -5,18 +5,20 @@ require 'fileutils'
 require 'yaml'
 
 options = {}
-series_map, no_subdir, touch = nil
 OptionParser.new do |opts|
   opts.banner = "Usage: tivo_fetch.rb [options]"
   
   opts.on("--series-map FILE", "Series map YAML file") { |val|
-    series_map = YAML.load_file(val)
+    options[:series_map] = YAML.load_file(val)
   }
-  opts.on("--no-subdir") { |bool|
-    no_subdir = bool
+  opts.on("--nosubdir", "Don't create subdir") { |bool|
+    options[:no_subdir] = bool
   }
-  opts.on("--touch") { |bool|
-    touch = bool
+  opts.on("--touch", "Touch original hidden file") { |bool|
+    options[:touch] = bool
+  }
+  opts.on("--noop", "Don't move file") { |bool|
+    options[:noop] = bool
   }
 end.parse!
 
@@ -53,7 +55,8 @@ end
 episode_str ||= sprintf("s%02de%02d", season_num, episode_num)
 plex_file = "#{show_title} - #{episode_str} - #{episode_title}"
 
-if ! no_subdir then
+unless options[:no_subdir] then
+  series_map = options[:series_map]
   series_dir = series_map && series_map[show_title] || show_title
   Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
 
@@ -67,8 +70,10 @@ else
 end
 
 puts plex_path
-File.rename(file, plex_path)
+unless options[:noop] then
+  File.rename(file, plex_path)
+end
 
-if touch then
+if options[:touch] then
   FileUtils.touch(File.dirname(file) + "/." + File.basename(file))
 end  
