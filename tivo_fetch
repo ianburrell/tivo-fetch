@@ -70,8 +70,11 @@ class TivoFetcher
 
   def fetch_cmd(show)
     url = show.content_url
+    if @options[:ts] then
+      url += "&Format=video/x-tivo-mpeg-ts"
+    end
     cookie_file = Tempfile.new('cookies').path
-    return %Q{curl #{@options[:verbose] ? '-v' : '-s'} --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
+    return %Q{curl #{@options[:verbose] ? '-v' : '-s'} -f --cookie-jar #{cookie_file} --digest --user "tivo:#{@mak}" "#{url}"}
   end
 
   def smart_fetch(show)
@@ -179,6 +182,9 @@ OptionParser.new do |opts|
   }
   opts.on("--show", "--plex", "Plex directories") { |bool|
     options[:plex_dir] = bool
+  }
+  opts.on("--ts") { |bool|
+    options[:ts] = bool
   }
   opts.on("--verbose", "Verbose") { |bool|
     options[:verbose] = bool
