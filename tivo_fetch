@@ -186,6 +186,9 @@ OptionParser.new do |opts|
   opts.on("--ts") { |bool|
     options[:ts] = bool
   }
+  opts.on("--shuffle") { |bool|
+    options[:shuffle] = bool
+  }
   opts.on("--verbose", "Verbose") { |bool|
     options[:verbose] = bool
   }
@@ -206,7 +209,11 @@ if ! ARGV.empty? then
     end
   end
 else
-  tivo.shows.each do |show|
+  shows = tivo.shows
+  if options[:shuffle] then
+    shows = shows.shuffle
+  end
+  shows.each do |show|
     next if show.custom_icon === 'urn:tivo:image:suggestion-recording'
     if options[:detail] then
       print_details(show)
