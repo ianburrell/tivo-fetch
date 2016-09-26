@@ -21,8 +21,10 @@ class TivoFetcher
     if @options[:plex_dir]  && show.episode_number && show.episode_number > 100 then
       base_name = plex_title(show)
     else
-      base_name = show.to_s
+      base_name = series_title(show)
     end
+    return nil unless base_name
+
     if @options[:skip] then
       skip_file = find_skip(base_name, extension, 'mpg', 'm4v')
       if skip_file then
@@ -37,15 +39,31 @@ class TivoFetcher
     return filename
   end
 
-  def plex_title(show)
+  def map_series_dir(show)
     series = show.title
     series_dir = (@series_map && @series_map[series]) || series
+    return nil unless series_dir
     Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
+    return series_dir
+  end
+
+  def series_title(show)
+    series_dir = map_series_dir(show)
+    return nil unless series_dir
+    return series_dir + '/' + show.to_s
+  end
+  
+  def plex_title(show)
+    series_dir = map_series_dir(show)
+    return nil unless series_dir
+
+    series = show.title
     season_num = show.episode_number / 100;
     episode_num = show.episode_number % 100;
     season_dir = 'Season ' + sprintf("%02d", season_num)
     dir = series_dir + '/' + season_dir
     Dir.mkdir(dir) unless Dir.exists?(dir)
+
     episode_str = sprintf("s%02de%02d", season_num, episode_num)
     file = series + ' - ' + episode_str \
         + (show.episode_title ? ' - ' + show.episode_title : '')
@@ -53,8 +71,10 @@ class TivoFetcher
   end
 
   def find_skip(base_name, *extensions)
+    dir = File.dirname(base_name)
+    file = File.basename(base_name)
     extensions.uniq.flat_map { |ext|
-      [ base_name + '.' + ext, '.' + base_name + '.' + ext ]
+      [ base_name + '.' + ext, dir + '/' + '.' + file + '.' + ext ]
     }.find { |file| File.exists?(file) }
   end
   
