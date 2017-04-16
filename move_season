@@ -20,6 +20,12 @@ OptionParser.new do |opts|
   opts.on("--noop", "Don't move file") { |bool|
     options[:noop] = bool
   }
+  opts.on("--force", "Move file when dest already exists") { |bool|
+    options[:force] = bool
+  }
+  opts.on("--cleanup", "Delete original file when already exists") { |bool|
+    options[:cleanup] = bool
+  }
 end.parse!
 
 file = ARGV.shift or raise "file required"
@@ -69,9 +75,17 @@ else
   plex_path = plex_file
 end
 
-puts plex_path
-unless options[:noop] then
-  File.rename(file, plex_path)
+if File.exists?(plex_path) && ! options[:force] then
+  puts plex_path + " already exists"
+  if options[:cleanup] then
+    puts file + " removed"
+    File.delete(file)
+  end
+else
+  puts plex_path
+  unless options[:noop] then
+    File.rename(file, plex_path)
+  end
 end
 
 if options[:touch] then
