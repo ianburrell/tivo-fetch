@@ -23,7 +23,10 @@ class TivoFetcher
     else
       base_name = series_title(show)
     end
-    return nil unless base_name
+    unless base_name 
+      puts "ignoring #{show.program_id} #{show.to_s}" unless @options[:quiet]
+      return nil
+    end
 
     if @options[:skip] then
       skip_file = find_skip(base_name, extension, 'mpg', 'm4v')
@@ -42,7 +45,7 @@ class TivoFetcher
   def map_series_dir(show)
     series = show.title
     series_dir = (@series_map && @series_map[series]) || series
-    return nil unless series_dir
+    return nil if ! series_dir || series_dir.empty?
     Dir.mkdir(series_dir) unless Dir.exists?(series_dir)
     return series_dir
   end
