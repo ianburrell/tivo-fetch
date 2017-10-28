@@ -1,0 +1,23 @@
+GIT
+  remote: https://github.com/ianburrell/votigoto.git
+  revision: 164e79dc42c1a452f73bb9dcfdcc5e2123497736
+  branch: master
+  specs:
+    votigoto (0.2.2)
+      hpricot (>= 0.5.145)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    duration (0.1.0)
+    hpricot (0.8.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  duration
+  votigoto!
+
+BUNDLED WITH
+   1.13.7
