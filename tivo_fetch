@@ -17,7 +17,7 @@ class TivoFetcher
     end
   end
 
-  def make_filename(show, extension)
+  def make_filename(show, extension, action="fetch")
     if @options[:plex_dir]  && show.episode_number && show.episode_number > 100 then
       base_name = plex_title(show)
     else
@@ -38,7 +38,7 @@ class TivoFetcher
    else 
       filename = counter_filename(base_name, extension)
     end
-    puts "fetch #{show.program_id} #{filename}"
+    puts "#{action} #{show.program_id} #{filename}"
     return filename
   end
 
@@ -108,42 +108,55 @@ class TivoFetcher
     else
       fetch(show)
     end
+    sleep(5)
   end
 
-  def run_cmd(show, extension, &get_cmd)
-    filename = make_filename(show, extension)
+  def run_cmd(show, extension, action, &get_cmd)
+    filename = make_filename(show, extension, action)
     return unless filename
     temp_filename = filename + ".tmp"
     cmd = get_cmd.call(show, temp_filename)
     puts cmd if @options[:verbose]
     system(cmd) or raise "#{cmd} failed: #{$?}"
     File.rename(temp_filename, filename)
-    sleep(5)
+    return filename
   end
   
   def fetch(show)
-    run_cmd(show, "tivo") { |show, temp_filename|
+    run_cmd(show, "tivo", "fetch") { |show, temp_filename|
       fetch_cmd(show) \
         + %Q{ -o "#{temp_filename}"}
     }
   end
 
   def fetch_and_decode(show)
-    run_cmd(show, "mpg") { |show, temp_filename|
-      fetch_cmd(show) \
-        + %Q{ | tivodecode --mak #{@mak} -o "#{temp_filename}" - #{@options[:verbose] ? '' : ' 2>/dev/null'}}
-    }
+    tivo_filename = fetch(show)
+    return unless tivo_filename
+    mpeg_filename = decode(show, tivo_filename)
+    File.unlink(tivo_filename)
+    return mpeg_filename
   end
 
   def fetch_and_encode(show)
-    run_cmd(show, "m4v") { |show, temp_filename|
-      fetch_cmd() \
-        + %Q{ | tivodecode --mak #{@mak} - 2>/dev/null} \
-        + %Q{ | ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'fatal' } -i - -c:v libx264 -crf 23 -c:a copy -f mp4 "#{temp_filename}"}
-      #%Q{ | mencoder -quiet -profile low -o "#{temp_filename}" -}
-    }
+    mpeg_filename = fetch_and_decode(show)
+    return unless mpeg_filename
+    m4v_filename = encode(show, mpeg_filename)
+    File.unlink(mpeg_filename)
+    return m4v_filename
   end
 
+  def encode(show, mpeg_filename)
+    run_cmd(show, "m4v", "encode") { |show, temp_filename|
+      %Q{ffmpeg -loglevel #{@options[:verbose] ? 'info' : 'fatal' } -i "#{mpeg_filename} -c:v libx264 -crf 23 -c:a copy -f mp4 -max_muxing_queue_size 9999 "#{temp_filename}"}
+    }
+  end
+  
+  def decode(show, tivo_filename)
+    run_cmd(show, "mpg", "decode") { |show, temp_filename|
+      %Q{java -jar /usr/local/share/java/TivoDecoder.jar -m #{@mak} -i "#{tivo_filename}" -o "#{temp_filename}"}
+    }
+  end
+  
 end
 
 def nice_file_size(size)
