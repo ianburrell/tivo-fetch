@@ -11,7 +11,7 @@ Find.find('.') do |path|
       if ! (File.exists?(mp4_file) || File.exists?(hide_file)) then
         puts "convert #{path}"
         Dir::Tmpname.create(File.basename(mp4_file) + '.tmp.', File.dirname(path)) do |tmp_file|
-          cmd = %Q{ffmpeg -nostdin -loglevel fatal -i "#{path}" -c:v libx264 -crf 23 -c:a copy -f mp4 "#{tmp_file}"}
+          cmd = %Q{ffmpeg -nostdin -loglevel fatal -i "#{path}" -c:v libx264 -crf 23 -c:a copy -f mp4 -max_muxing_queue_size 9999 "#{tmp_file}"}
           system(cmd) or raise "#{cmd} failed: #{$?}"
           File.rename(tmp_file, mp4_file)
           puts "create #{mp4_file}"
