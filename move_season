@@ -6,7 +6,7 @@ require 'yaml'
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: tivo_fetch.rb [options]"
+  opts.banner = "Usage: move_season [options] file season episode"
   
   opts.on("--series-map FILE", "Series map YAML file") { |val|
     options[:series_map] = YAML.load_file(val)
