@@ -7,7 +7,8 @@ Find.find('.') do |path|
   if path =~ /.*\.mpg$/ && File.size?(path) && File.size?(path) > 4 then
     begin
       mp4_file = path.sub(/\.mpg$/, '.m4v')
-      if ! File.exists?(mp4_file) then
+      hide_file = File.dirname(mp4_file) + "/." + File.basename(mp4_file)
+      if ! (File.exists?(mp4_file) || File.exists?(hide_file)) then
         puts "convert #{path}"
         Dir::Tmpname.create(File.basename(mp4_file) + '.tmp.', File.dirname(path)) do |tmp_file|
           cmd = %Q{ffmpeg -nostdin -loglevel fatal -i "#{path}" -c:v libx264 -crf 23 -c:a copy -f mp4 "#{tmp_file}"}
@@ -19,7 +20,7 @@ Find.find('.') do |path|
       puts "remove #{path}"
       File.unlink(path)
     rescue => e
-      print "#{path} failed: #{e}"
+      print "#{path} failed: #{e}\n"
     end
   end
 end
